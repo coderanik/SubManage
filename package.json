@@ -1,0 +1,22 @@
+{
+  "name": "subscription-backend",
+  "version": "1.0.0",
+  "description": "A backend to manage subscription ",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "test": "node server.js"
+  },
+  "author": "coderanik",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "express-validator": "^7.2.1",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.15.1"
+  }
+}
