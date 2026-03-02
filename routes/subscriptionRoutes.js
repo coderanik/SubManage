@@ -6,9 +6,11 @@ import {
   cancelSubscription,
   getPlans,
   getSubscriptionHistory,
-  getSubscriptionStatsController
+  getSubscriptionStatsController,
+  upgradeToPremium
 } from '../controllers/subscriptionControllers.js';
 import { subscriptionValidators } from '../middleware/validators.js';
+import { userAuth } from '../middleware/auth.js';
 
 const subscriptionRoutes = express.Router();
 
@@ -17,6 +19,9 @@ subscriptionRoutes.post('/', subscriptionValidators.create, createSubscription);
 subscriptionRoutes.get('/:userId', subscriptionValidators.get, getSubscription);
 subscriptionRoutes.put('/:userId', subscriptionValidators.update, updateSubscription);
 subscriptionRoutes.delete('/:userId', subscriptionValidators.cancel, cancelSubscription);
+
+// Upgrade Route
+subscriptionRoutes.post('/upgrade', userAuth, subscriptionValidators.upgrade, upgradeToPremium);
 
 // Additional subscription routes
 subscriptionRoutes.get('/:userId/history', subscriptionValidators.get, getSubscriptionHistory);

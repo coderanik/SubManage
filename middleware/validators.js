@@ -23,6 +23,11 @@ export const subscriptionValidators = {
     body('autoRenew').optional().isBoolean().withMessage('Auto-renew must be a boolean'),
     validate
   ],
+  upgrade: [
+    body('planId').isMongoId().withMessage('Invalid plan ID'),
+    body('paymentMethodToken').notEmpty().withMessage('Payment method token is required'),
+    validate
+  ],
   get: [
     param('userId').notEmpty().withMessage('User ID is required'),
     validate

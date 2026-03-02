@@ -4,7 +4,9 @@ import {
   createPlan,
   updatePlan,
   getAllPlans,
-  deletePlan
+  deletePlan,
+  getAccessLogs,
+  getMonthlyUsageReport
 } from '../controllers/adminControllers.js';
 import { adminAuth, superAdminAuth } from '../middleware/adminAuth.js';
 import { planValidators } from '../middleware/validators.js';
@@ -19,5 +21,11 @@ adminRoutes.post('/plans', adminAuth, planValidators.create, createPlan);
 adminRoutes.put('/plans/:planId', adminAuth, planValidators.update, updatePlan);
 adminRoutes.get('/plans', adminAuth, getAllPlans);
 adminRoutes.delete('/plans/:planId', adminAuth, deletePlan);
+
+// Access logs route (protected)
+adminRoutes.get('/logs', adminAuth, getAccessLogs);
+
+// Monthly usage reports (protected)
+adminRoutes.get('/reports/monthly', adminAuth, getMonthlyUsageReport);
 
 export default adminRoutes; 

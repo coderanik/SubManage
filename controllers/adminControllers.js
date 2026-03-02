@@ -1,5 +1,6 @@
 import Plan from "../models/Plan.js";
 import Subscription from "../models/Subscription.js";
+import AccessLog from "../models/AccessLog.js";
 import jwt from "jsonwebtoken";
 import { ApiError } from "../middleware/errorHandler.js";
 
@@ -195,4 +196,58 @@ export const deletePlan = async (req, res) => {
     console.error(error);
     return res.status(500).json({ error: "Internal Server Error" });
   }
-}; 
+};
+
+// Get access logs (admin view)
+export const getAccessLogs = async (req, res) => {
+  try {
+    const logs = await AccessLog.find()
+      .populate('userId', 'userId name email role')
+      .sort({ timestamp: -1 })
+      .limit(100); // Limit to latest 100 for performance
+      
+    return res.json({
+      success: true,
+      logs
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// Generate monthly usage reports in CSV format
+export const getMonthlyUsageReport = async (req, res) => {
+  try {
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+    const logs = await AccessLog.find({ timestamp: { $gte: oneMonthAgo } })
+      .populate('userId', 'userId email role')
+      .sort({ timestamp: -1 });
+
+    const csvHeaders = ['Timestamp', 'UserId', 'Email', 'Role', 'Method', 'Endpoint', 'IP Address', 'User Agent'];
+    const csvRows = logs.map(log => {
+      const u = log.userId || {};
+      return [
+        log.timestamp.toISOString(),
+        u.userId || 'Unknown',
+        u.email || 'Unknown',
+        u.role || 'Unknown',
+        log.method,
+        log.endpoint,
+        log.ipAddress,
+        (log.userAgent || '').replace(/,/g, '') // Remove commas to preserve CSV logic
+      ].join(',');
+    });
+
+    const csvData = [csvHeaders.join(','), ...csvRows].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=monthly_usage_report.csv');
+    return res.status(200).send(csvData);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};

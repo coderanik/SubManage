@@ -1,4 +1,5 @@
 import Subscription from '../models/Subscription.js';
+import User from '../models/User.js';
 import { ApiError } from '../middleware/errorHandler.js';
 
 // Check and update expired subscriptions
@@ -26,6 +27,19 @@ export const checkExpiredSubscriptions = async () => {
       } else {
         subscription.status = 'EXPIRED';
         await subscription.save();
+
+        // Check if user has other active subscriptions
+        const activeSubs = await Subscription.countDocuments({
+          userId: subscription.userId,
+          status: 'ACTIVE'
+        });
+
+        if (activeSubs === 0) {
+          await User.findOneAndUpdate(
+            { userId: subscription.userId },
+            { role: 'Free' }
+          );
+        }
       }
     }
 

@@ -1,133 +1,161 @@
 # Subscription Management Backend
 
-A robust subscription management system built with Node.js, Express, and MongoDB.
+A robust backend API for a premium content platform where users must have an active subscription to access protected content. Built with Node.js, Express, and MongoDB.
 
 ## Features
 
-- User authentication and authorization
-- Subscription plan management
-- Subscription lifecycle management (create, update, cancel)
-- Automatic subscription expiration handling
-- Subscription statistics and history
-- Input validation and error handling
-- CORS support
-- Secure cookie handling
+- User authentication (Register/Login) with roles (`Free` and `Premium`).
+- Subscription plan management and subscription upgrade simulation.
+- Middleware protecting premium content. Only `Premium` users can access.
+- Activity logging capturing request details (IP, user agent) for analytics.
+- Automatic subscription expiration handling (downgrades user back to `Free`).
+- Generate monthly access logs in CSV format for admin.
+- Docker support for local deployment.
 
 ## Prerequisites
 
-- Node.js (v14 or higher)
+- Node.js (v18 or higher recommended)
 - MongoDB
-- npm or yarn
+- Docker & Docker Compose (optional, for containerized run)
 
-## Installation
+## Environment Variables
 
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd subscription-backend
-```
+Create a `.env` file in the root directory:
 
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Create a `.env` file in the root directory:
 ```env
 PORT=3000
 MONGO_URI=mongodb://localhost:27017
-JWT_SECRET=your_jwt_secret
+JWT_SECRET=your_super_secret_jwt_key
 CLIENT_URL=http://localhost:3000
-NODE_ENV=development
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASS=admin123
 ```
 
-4. Start the server:
+*(Note: If using Docker Compose, you don't need to specify MONGO_URI, it defaults to the container service)*
+
+## Setup and Run Locally
+
+### Using Node.js directly
+
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+2. Start the MongoDB service locally on your machine.
+
+3. Start the server:
+   ```bash
+   npm run test
+   ```
+
+### Using Docker & Docker Compose
+
+To run the application and a MongoDB instance entirely in Docker:
+
+1. Build and start the containers:
+   ```bash
+   docker-compose up --build
+   ```
+
+2. The server will be accessible at `http://localhost:3000`
+
+## Example API Requests
+
+### 1. Register a Free User
 ```bash
-npm start
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "email": "john@example.com",
+    "password": "password123"
+  }'
+
+# Response includes setting the JWT in an HTTP-only cookie
 ```
 
-## API Documentation
-
-### Authentication Endpoints
-
-- `POST /auth/register` - Register a new user
-- `POST /auth/login` - Login user
-- `POST /auth/logout` - Logout user
-
-### Subscription Endpoints
-
-- `POST /subscriptions` - Create a new subscription
-  - Body: `{ userId: string, planId: string }`
-
-- `GET /subscriptions/:userId` - Get user's current subscription
-  - Params: `userId`
-
-- `PUT /subscriptions/:userId` - Update subscription
-  - Params: `userId`
-  - Body: `{ planId?: string, autoRenew?: boolean }`
-
-- `DELETE /subscriptions/:userId` - Cancel subscription
-  - Params: `userId`
-
-- `GET /subscriptions/:userId/history` - Get subscription history
-  - Params: `userId`
-
-- `GET /subscriptions/stats` - Get subscription statistics
-
-### Plan Endpoints
-
-- `GET /subscriptions/plans` - Get all available plans
-
-## Error Handling
-
-The API uses a consistent error response format:
-
-```json
-{
-  "status": "error",
-  "message": "Error message"
-}
-```
-
-## Security Features
-
-- JWT-based authentication
-- Password hashing with bcrypt
-- HTTP-only cookies
-- CORS configuration
-- Input validation
-- Error handling middleware
-
-## Subscription Status
-
-Subscriptions can have the following statuses:
-- ACTIVE: Currently active subscription
-- INACTIVE: Subscription is not active
-- CANCELLED: User has cancelled the subscription
-- EXPIRED: Subscription has expired
-
-## Development
-
-To run the server in development mode:
+### 2. Login
 ```bash
-npm run dev
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john@example.com",
+    "password": "password123"
+  }'
 ```
 
-## Testing
-
-To run tests:
+### 3. Attempt to Access Premium Content (as Free user)
+*(Requires cookie from login)*
 ```bash
-npm test
+curl -X GET http://localhost:3000/content/premium \
+  -b "token=YOUR_COOKIE_HERE"
+
+# Expected Response (403 Forbidden):
+# { "error": "Premium subscription required to access this resource" }
 ```
 
-## Contributing
+### 4. Admin Logs In
+```bash
+curl -X POST http://localhost:3000/admin/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@example.com",
+    "password": "admin123"
+  }'
+```
 
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a new Pull Request
+### 5. Admin Creates a Plan
+```bash
+curl -X POST http://localhost:3000/admin/plans \
+  -b "adminToken=YOUR_ADMIN_COOKIE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Pro Plan",
+    "price": 9.99,
+    "features": ["Feature A", "Feature B"],
+    "duration": 30
+  }'
+# Returns the new planId
+```
 
-## License
+### 6. Upgrade User to Premium
+```bash
+curl -X POST http://localhost:3000/subscriptions/upgrade \
+  -b "token=YOUR_COOKIE_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "planId": "PLAN_ID_FROM_ABOVE",
+    "paymentMethodToken": "tok_visa_simulation"
+  }'
 
-This project is licensed under the MIT License. 
+# Expected Response: User successfully upgraded to Premium
+```
+
+### 7. Access Premium Content Successfully
+```bash
+curl -X GET http://localhost:3000/content/premium \
+  -b "token=YOUR_COOKIE_HERE"
+
+# Expected Response (200 OK):
+# {
+#   "success": true,
+#   "message": "Welcome to Premium Content!",
+#   "data": { ... }
+# }
+```
+
+### 8. Admin Retrieves Analytics / Monthly Usage Report (CSV)
+```bash
+curl -X GET http://localhost:3000/admin/reports/monthly \
+  -b "adminToken=YOUR_ADMIN_COOKIE" \
+  -o report.csv
+```
+
+## System Architecture
+
+- `routes/`: API endpoint definitions
+- `controllers/`: Logic for routes
+- `middleware/`: Auth validation, Request validation, Error Handling
+- `models/`: Mongoose schemas
+- `services/`: Cron jobs and shared methods

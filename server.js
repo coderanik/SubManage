@@ -4,6 +4,7 @@ import "dotenv/config"
 import authroutes from "./routes/authRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import contentRoutes from "./routes/contentRoutes.js";
 import cookieParser from "cookie-parser"
 import cors from "cors"
 import { errorHandler } from "./middleware/errorHandler.js";
@@ -31,6 +32,7 @@ app.get('/', (req, res) => {
 app.use("/auth", authroutes);
 app.use("/subscriptions", subscriptionRoutes);
 app.use("/admin", adminRoutes);
+app.use("/content", contentRoutes);
 
 // Error handling
 app.use(errorHandler);

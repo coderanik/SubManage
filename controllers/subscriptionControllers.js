@@ -60,6 +60,77 @@ export const createSubscription = async (req, res) => {
   }
 };
 
+// Upgrade a user from Free to Premium
+export const upgradeToPremium = async (req, res) => {
+  try {
+    const { planId, paymentMethodToken } = req.body;
+    const userId = req.user.userId; // Assuming userAuth middleware
+
+    // Validate if the user is currently Free
+    const user = await User.findOne({ userId });
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+
+    if (user.role === 'Premium') {
+      throw new ApiError(400, "User is already a Premium member");
+    }
+
+    // Validate plan exists and is active
+    const plan = await Plan.findOne({ _id: planId, isActive: true });
+    if (!plan) {
+      throw new ApiError(404, "Plan not found or inactive");
+    }
+
+    // Simulate successful payment process
+    if (!paymentMethodToken) {
+      throw new ApiError(400, "Payment method is required");
+    }
+
+    const paymentSimulatedSuccess = true; // Simulating external payment gateway validation
+    if (!paymentSimulatedSuccess) {
+      throw new ApiError(402, "Payment failed");
+    }
+
+    // Calculate end date
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + plan.duration);
+
+    const subscription = new Subscription({
+      userId,
+      planId,
+      endDate,
+      status: 'ACTIVE',
+      paymentStatus: 'COMPLETED'
+    });
+
+    await subscription.save();
+
+    // Update user role to Premium
+    user.role = 'Premium';
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Successfully upgraded to Premium plan",
+      subscription,
+      user: {
+        userId: user.userId,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+    console.error(error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
 // Get user's current subscriptions
 export const getSubscription = async (req, res) => {
   try {
