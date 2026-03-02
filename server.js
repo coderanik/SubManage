@@ -1,5 +1,5 @@
 import express from "express"
-import db from "./config/db.js";
+import { connectDB } from "./config/db.js";
 import "dotenv/config"
 import authroutes from "./routes/authRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
@@ -16,7 +16,7 @@ const port = process.env.PORT || 3000;
 const app = express();
 
 // Connect to database
-db();
+connectDB();
 
 // Middleware
 app.use(express.json());
