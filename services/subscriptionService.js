@@ -1,5 +1,7 @@
+import { Op } from 'sequelize';
 import Subscription from '../models/Subscription.js';
 import User from '../models/User.js';
+import Plan from '../models/Plan.js';
 import { ApiError } from '../middleware/errorHandler.js';
 
 // Check and update expired subscriptions
@@ -8,16 +10,18 @@ export const checkExpiredSubscriptions = async () => {
     const now = new Date();
     
     // Find all active subscriptions that have expired
-    const expiredSubscriptions = await Subscription.find({
-      status: 'ACTIVE',
-      endDate: { $lt: now }
+    const expiredSubscriptions = await Subscription.findAll({
+      where: {
+        status: 'ACTIVE',
+        endDate: { [Op.lt]: now }
+      }
     });
 
     // Update expired subscriptions
     for (const subscription of expiredSubscriptions) {
       if (subscription.autoRenew) {
         // Calculate new end date based on current plan
-        const plan = await subscription.populate('planId');
+        const plan = await Plan.findByPk(subscription.planId);
         const newEndDate = new Date();
         newEndDate.setDate(newEndDate.getDate() + plan.duration);
         
@@ -29,15 +33,17 @@ export const checkExpiredSubscriptions = async () => {
         await subscription.save();
 
         // Check if user has other active subscriptions
-        const activeSubs = await Subscription.countDocuments({
-          userId: subscription.userId,
-          status: 'ACTIVE'
+        const activeSubs = await Subscription.count({
+          where: {
+            userId: subscription.userId,
+            status: 'ACTIVE'
+          }
         });
 
         if (activeSubs === 0) {
-          await User.findOneAndUpdate(
-            { userId: subscription.userId },
-            { role: 'Free' }
+          await User.update(
+            { role: 'Free' },
+            { where: { userId: subscription.userId } }
           );
         }
       }
@@ -45,6 +51,7 @@ export const checkExpiredSubscriptions = async () => {
 
     return expiredSubscriptions;
   } catch (error) {
+    console.error(error);
     throw new ApiError(500, 'Error checking expired subscriptions');
   }
 };
@@ -52,16 +59,15 @@ export const checkExpiredSubscriptions = async () => {
 // Get subscription statistics
 export const getSubscriptionStats = async () => {
   try {
-    const stats = await Subscription.aggregate([
-      {
-        $group: {
-          _id: '$status',
-          count: { $sum: 1 }
-        }
-      }
-    ]);
+    const stats = await Subscription.count({
+      group: ['status']
+    });
 
-    return stats;
+    // Format output to match existing pipeline
+    return stats.map(stat => ({
+      _id: stat.status,
+      count: parseInt(stat.count, 10)
+    }));
   } catch (error) {
     throw new ApiError(500, 'Error getting subscription statistics');
   }
@@ -70,12 +76,14 @@ export const getSubscriptionStats = async () => {
 // Get user subscription history
 export const getUserSubscriptionHistory = async (userId) => {
   try {
-    const history = await Subscription.find({ userId })
-      .populate('planId')
-      .sort({ createdAt: -1 });
+    const history = await Subscription.findAll({ 
+      where: { userId },
+      include: [{ model: Plan, as: 'planIdRecord' }],
+      order: [['createdAt', 'DESC']]
+    });
 
     return history;
   } catch (error) {
     throw new ApiError(500, 'Error getting subscription history');
   }
-}; 
+};
