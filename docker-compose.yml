@@ -7,20 +7,24 @@ services:
       - "3000:3000"
     environment:
       - PORT=3000
-      - MONGO_URI=mongodb://mongodb:27017
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/subscription
       - JWT_SECRET=your_super_secret_jwt_key
       - CLIENT_URL=http://localhost:3000
       - ADMIN_EMAIL=admin@example.com
       - ADMIN_PASS=admin123
     depends_on:
-      - mongodb
+      - postgres
 
-  mongodb:
-    image: mongo:latest
+  postgres:
+    image: postgres:latest
     ports:
-      - "27017:27017"
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=subscription
     volumes:
-      - mongodb_data:/data/db
+      - postgres_data:/var/lib/postgresql/data
 
 volumes:
-  mongodb_data:
+  postgres_data:

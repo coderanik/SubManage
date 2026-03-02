@@ -1,6 +1,6 @@
 # Subscription Management Backend
 
-A robust backend API for a premium content platform where users must have an active subscription to access protected content. Built with Node.js, Express, and MongoDB.
+A robust backend API for a premium content platform where users must have an active subscription to access protected content. Built with Node.js, Express, and PostgreSQL (Sequelize).
 
 ## Features
 
@@ -15,7 +15,7 @@ A robust backend API for a premium content platform where users must have an act
 ## Prerequisites
 
 - Node.js (v18 or higher recommended)
-- MongoDB
+- PostgreSQL
 - Docker & Docker Compose (optional, for containerized run)
 
 ## Environment Variables
@@ -24,14 +24,14 @@ Create a `.env` file in the root directory:
 
 ```env
 PORT=3000
-MONGO_URI=mongodb://localhost:27017
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/subscription
 JWT_SECRET=your_super_secret_jwt_key
 CLIENT_URL=http://localhost:3000
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASS=admin123
 ```
 
-*(Note: If using Docker Compose, you don't need to specify MONGO_URI, it defaults to the container service)*
+*(Note: If using Docker Compose, you don't need to specify DATABASE_URL, it natively connects via container domain configs)*
 
 ## Setup and Run Locally
 
@@ -42,7 +42,7 @@ ADMIN_PASS=admin123
    npm install
    ```
 
-2. Start the MongoDB service locally on your machine.
+2. Start the PostgreSQL service locally on your machine, initialize the `subscription` database schemas.
 
 3. Start the server:
    ```bash
@@ -51,7 +51,7 @@ ADMIN_PASS=admin123
 
 ### Using Docker & Docker Compose
 
-To run the application and a MongoDB instance entirely in Docker:
+To run the application and a PostgreSQL instance entirely in Docker:
 
 1. Build and start the containers:
    ```bash
@@ -157,5 +157,5 @@ curl -X GET http://localhost:3000/admin/reports/monthly \
 - `routes/`: API endpoint definitions
 - `controllers/`: Logic for routes
 - `middleware/`: Auth validation, Request validation, Error Handling
-- `models/`: Mongoose schemas
-- `services/`: Cron jobs and shared methods
+- `models/`: Sequelize schemas defining Postgres mapping
+- `services/`: Cron jobs and shared aggregated methods
