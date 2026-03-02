@@ -16,7 +16,7 @@ const generateUserId = async () => {
     }
     
     // Check if the generated ID already exists
-    const existingUser = await User.findOne({ userId });
+    const existingUser = await User.findOne({ where: { userId } });
     if (!existingUser) {
       isUnique = true;
     }
@@ -33,7 +33,7 @@ export const register = async (req, res) => {
   }
 
   try {
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ error: "User already exists" });
     }
@@ -41,16 +41,14 @@ export const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const userId = await generateUserId();
     
-    const newUser = new User({
+    const newUser = await User.create({
       userId,
       name,
       email,
       password: hashedPassword,
     });
 
-    await newUser.save();
-
-    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: newUser.id }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
 
@@ -80,7 +78,7 @@ export const login = async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ where: { email } });
     if (!user) {
       return res.status(400).json({ error: "Invalid credentials" });
     }
@@ -90,7 +88,7 @@ export const login = async (req, res) => {
       return res.status(400).json({ error: "Invalid credentials" });
     }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
 
@@ -110,7 +108,6 @@ export const login = async (req, res) => {
 export const logout = async (req, res) => {
   try {
     res.cookie("token", "", {
-      // Clear the token cookie
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",

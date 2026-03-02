@@ -1,6 +1,8 @@
+import { Op } from "sequelize";
 import Plan from "../models/Plan.js";
 import Subscription from "../models/Subscription.js";
 import AccessLog from "../models/AccessLog.js";
+import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 import { ApiError } from "../middleware/errorHandler.js";
 
@@ -55,12 +57,12 @@ export const createPlan = async (req, res) => {
     const { name, price, features, duration } = req.body;
 
     // Check if plan with same name exists
-    const existingPlan = await Plan.findOne({ name });
+    const existingPlan = await Plan.findOne({ where: { name } });
     if (existingPlan) {
       throw new ApiError(400, "Plan with this name already exists");
     }
 
-    const plan = new Plan({
+    const plan = await Plan.create({
       name,
       price,
       features,
@@ -68,13 +70,11 @@ export const createPlan = async (req, res) => {
       isActive: true
     });
 
-    await plan.save();
-
     return res.status(201).json({
       success: true,
       message: "Plan created successfully",
       plan: {
-        id: plan._id,
+        id: plan.id,
         name: plan.name,
         price: plan.price,
         features: plan.features,
@@ -96,14 +96,14 @@ export const updatePlan = async (req, res) => {
     const { planId } = req.params;
     const { name, price, features, duration, isActive } = req.body;
 
-    const plan = await Plan.findById(planId);
+    const plan = await Plan.findByPk(planId);
     if (!plan) {
       throw new ApiError(404, "Plan not found");
     }
 
     // If name is being updated, check for duplicates
     if (name && name !== plan.name) {
-      const existingPlan = await Plan.findOne({ name });
+      const existingPlan = await Plan.findOne({ where: { name } });
       if (existingPlan) {
         throw new ApiError(400, "Plan with this name already exists");
       }
@@ -122,7 +122,7 @@ export const updatePlan = async (req, res) => {
       success: true,
       message: "Plan updated successfully",
       plan: {
-        id: plan._id,
+        id: plan.id,
         name: plan.name,
         price: plan.price,
         features: plan.features,
@@ -142,12 +142,12 @@ export const updatePlan = async (req, res) => {
 // Get all plans (admin view)
 export const getAllPlans = async (req, res) => {
   try {
-    const plans = await Plan.find().sort({ createdAt: -1 });
+    const plans = await Plan.findAll({ order: [['createdAt', 'DESC']] });
     
     return res.json({
       success: true,
       plans: plans.map(plan => ({
-        id: plan._id,
+        id: plan.id,
         name: plan.name,
         price: plan.price,
         features: plan.features,
@@ -168,22 +168,24 @@ export const deletePlan = async (req, res) => {
   try {
     const { planId } = req.params;
 
-    const plan = await Plan.findById(planId);
+    const plan = await Plan.findByPk(planId);
     if (!plan) {
       throw new ApiError(404, "Plan not found");
     }
 
     // Check if plan has active subscriptions
-    const activeSubscriptions = await Subscription.countDocuments({
-      planId,
-      status: 'ACTIVE'
+    const activeSubscriptions = await Subscription.count({
+      where: {
+        planId,
+        status: 'ACTIVE'
+      }
     });
 
     if (activeSubscriptions > 0) {
       throw new ApiError(400, "Cannot delete plan with active subscriptions");
     }
 
-    await plan.deleteOne();
+    await plan.destroy();
 
     return res.json({
       success: true,
@@ -201,10 +203,11 @@ export const deletePlan = async (req, res) => {
 // Get access logs (admin view)
 export const getAccessLogs = async (req, res) => {
   try {
-    const logs = await AccessLog.find()
-      .populate('userId', 'userId name email role')
-      .sort({ timestamp: -1 })
-      .limit(100); // Limit to latest 100 for performance
+    const logs = await AccessLog.findAll({
+      include: [{ model: User, as: 'userRef', attributes: ['userId', 'name', 'email', 'role'] }],
+      order: [['timestamp', 'DESC']],
+      limit: 100
+    });
       
     return res.json({
       success: true,
@@ -222,13 +225,15 @@ export const getMonthlyUsageReport = async (req, res) => {
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
-    const logs = await AccessLog.find({ timestamp: { $gte: oneMonthAgo } })
-      .populate('userId', 'userId email role')
-      .sort({ timestamp: -1 });
+    const logs = await AccessLog.findAll({
+      where: { timestamp: { [Op.gte]: oneMonthAgo } },
+      include: [{ model: User, as: 'userRef', attributes: ['userId', 'email', 'role'] }],
+      order: [['timestamp', 'DESC']]
+    });
 
     const csvHeaders = ['Timestamp', 'UserId', 'Email', 'Role', 'Method', 'Endpoint', 'IP Address', 'User Agent'];
     const csvRows = logs.map(log => {
-      const u = log.userId || {};
+      const u = log.userRef || {};
       return [
         log.timestamp.toISOString(),
         u.userId || 'Unknown',

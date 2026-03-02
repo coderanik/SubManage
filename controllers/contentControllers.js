@@ -4,7 +4,7 @@ export const getPremiumContent = async (req, res) => {
   try {
     // Log the access activity
     const accessLog = new AccessLog({
-      userId: req.user._id,
+      userPk: req.user.id,
       endpoint: req.originalUrl,
       method: req.method,
       ipAddress: req.ip || req.connection.remoteAddress,

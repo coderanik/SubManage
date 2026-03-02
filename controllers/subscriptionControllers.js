@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import Subscription from "../models/Subscription.js";
 import Plan from "../models/Plan.js";
 import User from "../models/User.js";
@@ -10,22 +11,20 @@ export const createSubscription = async (req, res) => {
     const { userId, planId } = req.body;
 
     // Validate user exists
-    const user = await User.findOne({ userId });
+    const user = await User.findOne({ where: { userId } });
     if (!user) {
       throw new ApiError(404, "User not found");
     }
 
     // Validate plan exists and is active
-    const plan = await Plan.findOne({ _id: planId, isActive: true });
+    const plan = await Plan.findOne({ where: { id: planId, isActive: true } });
     if (!plan) {
       throw new ApiError(404, "Plan not found or inactive");
     }
 
     // Check if user already has this specific plan
     const existingPlanSubscription = await Subscription.findOne({
-      userId,
-      planId,
-      status: 'ACTIVE'
+      where: { userId, planId, status: 'ACTIVE' }
     });
 
     if (existingPlanSubscription) {
@@ -36,15 +35,13 @@ export const createSubscription = async (req, res) => {
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + plan.duration);
 
-    const subscription = new Subscription({
+    const subscription = await Subscription.create({
       userId,
       planId,
       endDate,
       status: 'ACTIVE',
       paymentStatus: 'PENDING'
     });
-
-    await subscription.save();
 
     return res.status(201).json({
       success: true,
@@ -67,7 +64,7 @@ export const upgradeToPremium = async (req, res) => {
     const userId = req.user.userId; // Assuming userAuth middleware
 
     // Validate if the user is currently Free
-    const user = await User.findOne({ userId });
+    const user = await User.findOne({ where: { userId } });
     if (!user) {
       throw new ApiError(404, "User not found");
     }
@@ -77,7 +74,7 @@ export const upgradeToPremium = async (req, res) => {
     }
 
     // Validate plan exists and is active
-    const plan = await Plan.findOne({ _id: planId, isActive: true });
+    const plan = await Plan.findOne({ where: { id: planId, isActive: true } });
     if (!plan) {
       throw new ApiError(404, "Plan not found or inactive");
     }
@@ -96,15 +93,13 @@ export const upgradeToPremium = async (req, res) => {
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + plan.duration);
 
-    const subscription = new Subscription({
+    const subscription = await Subscription.create({
       userId,
       planId,
       endDate,
       status: 'ACTIVE',
       paymentStatus: 'COMPLETED'
     });
-
-    await subscription.save();
 
     // Update user role to Premium
     user.role = 'Premium';
@@ -136,12 +131,11 @@ export const getSubscription = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    const subscriptions = await Subscription.find({ 
-      userId,
-      status: 'ACTIVE'
-    })
-      .populate('planId')
-      .sort({ createdAt: -1 });
+    const subscriptions = await Subscription.findAll({ 
+      where: { userId, status: 'ACTIVE' },
+      include: [{ model: Plan, as: 'planIdRecord' }],
+      order: [['createdAt', 'DESC']]
+    });
 
     if (!subscriptions.length) {
       throw new ApiError(404, "No active subscriptions found");
@@ -167,9 +161,7 @@ export const updateSubscription = async (req, res) => {
     const { subscriptionId, planId, autoRenew } = req.body;
 
     const subscription = await Subscription.findOne({ 
-      _id: subscriptionId,
-      userId, 
-      status: 'ACTIVE' 
+      where: { id: subscriptionId, userId, status: 'ACTIVE' }
     });
 
     if (!subscription) {
@@ -177,17 +169,19 @@ export const updateSubscription = async (req, res) => {
     }
 
     if (planId) {
-      const newPlan = await Plan.findOne({ _id: planId, isActive: true });
+      const newPlan = await Plan.findOne({ where: { id: planId, isActive: true } });
       if (!newPlan) {
         throw new ApiError(404, "Plan not found or inactive");
       }
 
       // Check if user already has this plan
       const existingPlanSubscription = await Subscription.findOne({
-        userId,
-        planId,
-        status: 'ACTIVE',
-        _id: { $ne: subscriptionId } // Exclude current subscription
+        where: {
+          userId,
+          planId,
+          status: 'ACTIVE',
+          id: { [Op.ne]: subscriptionId } // Exclude current subscription
+        }
       });
 
       if (existingPlanSubscription) {
@@ -229,9 +223,7 @@ export const cancelSubscription = async (req, res) => {
     const { subscriptionId } = req.body;
 
     const subscription = await Subscription.findOne({ 
-      _id: subscriptionId,
-      userId, 
-      status: 'ACTIVE' 
+      where: { id: subscriptionId, userId, status: 'ACTIVE' }
     });
 
     if (!subscription) {
@@ -258,7 +250,7 @@ export const cancelSubscription = async (req, res) => {
 // Get all available plans
 export const getPlans = async (req, res) => {
   try {
-    const plans = await Plan.find({ isActive: true });
+    const plans = await Plan.findAll({ where: { isActive: true } });
     return res.json({
       success: true,
       plans
