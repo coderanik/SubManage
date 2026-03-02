@@ -5,6 +5,8 @@ import authroutes from "./routes/authRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import contentRoutes from "./routes/contentRoutes.js";
+import swaggerUi from "swagger-ui-express";
+import swaggerSpec from "./config/swagger.js";
 import cookieParser from "cookie-parser"
 import cors from "cors"
 import { errorHandler } from "./middleware/errorHandler.js";
@@ -25,6 +27,8 @@ app.use(cors({
 }));
 
 // Routes
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 app.get('/', (req, res) => {
   res.send("Backend is working");
 });
