@@ -1,46 +1,39 @@
-import mongoose from "mongoose";
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/db.js';
+import User from './User.js';
+import Plan from './Plan.js';
 
-const subscriptionSchema = new mongoose.Schema({
-  userId: {
-    type: String,
-    required: true,
-    ref: 'User'
-  },
-  planId: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
-    ref: 'Plan'
+const Subscription = sequelize.define('Subscription', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
   },
   status: {
-    type: String,
-    enum: ['ACTIVE', 'INACTIVE', 'CANCELLED', 'EXPIRED'],
-    default: 'ACTIVE'
+    type: DataTypes.ENUM('ACTIVE', 'INACTIVE', 'CANCELLED', 'EXPIRED'),
+    defaultValue: 'ACTIVE',
   },
   startDate: {
-    type: Date,
-    default: Date.now
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW,
   },
   endDate: {
-    type: Date,
-    required: true
+    type: DataTypes.DATE,
+    allowNull: false,
   },
   autoRenew: {
-    type: Boolean,
-    default: true
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
   },
   paymentStatus: {
-    type: String,
-    enum: ['PENDING', 'COMPLETED', 'FAILED'],
-    default: 'PENDING'
+    type: DataTypes.ENUM('PENDING', 'COMPLETED', 'FAILED'),
+    defaultValue: 'PENDING',
   }
-}, {
-  timestamps: true
 });
 
-// Index for faster queries
-subscriptionSchema.index({ userId: 1, status: 1 });
-subscriptionSchema.index({ endDate: 1 });
+Subscription.belongsTo(User, { foreignKey: 'userId', targetKey: 'userId', as: 'userRecord' });
+Subscription.belongsTo(Plan, { foreignKey: 'planId', as: 'planIdRecord' }); // keep alias similar for easy populate mapping? Alias can just be "Plan"
+User.hasMany(Subscription, { foreignKey: 'userId', sourceKey: 'userId' });
+Plan.hasMany(Subscription, { foreignKey: 'planId' });
 
-const Subscription = mongoose.model("Subscription", subscriptionSchema);
-
-export default Subscription; 
+export default Subscription;

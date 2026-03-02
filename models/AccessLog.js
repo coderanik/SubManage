@@ -1,31 +1,34 @@
-import mongoose from "mongoose";
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/db.js';
+import User from './User.js';
 
-const accessLogSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
+const AccessLog = sequelize.define('AccessLog', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
   },
   endpoint: {
-    type: String,
-    required: true,
+    type: DataTypes.STRING,
+    allowNull: false,
   },
   method: {
-    type: String,
-    required: true,
+    type: DataTypes.STRING,
+    allowNull: false,
   },
   ipAddress: {
-    type: String,
+    type: DataTypes.STRING,
   },
   userAgent: {
-    type: String,
+    type: DataTypes.STRING,
   },
   timestamp: {
-    type: Date,
-    default: Date.now,
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW,
   }
 });
 
-const AccessLog = mongoose.model("AccessLog", accessLogSchema);
+AccessLog.belongsTo(User, { foreignKey: 'userPk', targetKey: 'id', as: 'userRef' });
+User.hasMany(AccessLog, { foreignKey: 'userPk', sourceKey: 'id' });
 
 export default AccessLog;

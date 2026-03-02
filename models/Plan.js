@@ -1,31 +1,33 @@
-import mongoose from "mongoose";
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/db.js';
 
-const planSchema = new mongoose.Schema({
+const Plan = sequelize.define('Plan', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
+  },
   name: {
-    type: String,
-    required: true,
+    type: DataTypes.STRING,
+    allowNull: false,
     unique: true,
   },
   price: {
-    type: Number,
-    required: true,
+    type: DataTypes.FLOAT,
+    allowNull: false,
   },
-  features: [{
-    type: String,
-    required: true,
-  }],
+  features: {
+    type: DataTypes.JSON, 
+    allowNull: false,
+  },
   duration: {
-    type: Number,  // Duration in days
-    required: true,
+    type: DataTypes.INTEGER,
+    allowNull: false,
   },
   isActive: {
-    type: Boolean,
-    default: true,
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
   }
-}, {
-  timestamps: true
 });
 
-const Plan = mongoose.model("Plan", planSchema);
-
-export default Plan; 
+export default Plan;
