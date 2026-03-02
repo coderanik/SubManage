@@ -42,12 +42,19 @@ ADMIN_PASS=admin123
    npm install
    ```
 
-2. Start the PostgreSQL service locally on your machine, initialize the `subscription` database schemas.
+2. Start the PostgreSQL service locally on your machine.
+   *Important*: You must create the database before starting the application for the first time:
+   ```bash
+   psql -U postgres -d postgres -c "CREATE DATABASE subscription;"
+   ```
 
 3. Start the server:
    ```bash
-   npm run test
+   npm run dev
    ```
+
+4. View the Swagger API Documentation directly in your browser:
+   **[http://localhost:3000/api-docs](http://localhost:3000/api-docs)**
 
 ### Using Docker & Docker Compose
 
@@ -59,6 +66,7 @@ To run the application and a PostgreSQL instance entirely in Docker:
    ```
 
 2. The server will be accessible at `http://localhost:3000`
+3. The API documentation will be generated and served at `http://localhost:3000/api-docs`
 
 ## Example API Requests
 
