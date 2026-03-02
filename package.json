@@ -5,7 +5,7 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "test": "node server.js"
+    "dev": "node server.js"
   },
   "author": "coderanik",
   "license": "MIT",
